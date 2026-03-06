@@ -43,6 +43,7 @@ class TwitterPlugin {
         this.postTweetFunction,
         this.likeTweetFunction,
         this.quoteTweetFunction,
+        this.getFollowersFunction,
       ],
       getEnvironment: data?.getEnvironment || this.getMetrics.bind(this),
     });
@@ -214,6 +215,59 @@ class TwitterPlugin {
           return new ExecutableGameFunctionResponse(
             ExecutableGameFunctionStatus.Failed,
             "Failed to like tweet"
+          );
+        }
+      },
+    });
+  }
+
+  get getFollowersFunction() {
+    return new GameFunction({
+      name: "get_followers",
+      description:
+        "Retrieve the list of followers for a given user ID. Use this to analyze a user's audience or find potential accounts to engage with.",
+      args: [
+        { name: "user_id", description: "The Twitter user ID to get followers for" },
+      ] as const,
+      executable: async (args, logger) => {
+        try {
+          if (!args.user_id) {
+            return new ExecutableGameFunctionResponse(
+              ExecutableGameFunctionStatus.Failed,
+              "User ID is required"
+            );
+          }
+
+          logger(`Getting followers for user id: ${args.user_id}`);
+
+          const followers = await this.twitterClient.v2.followers(args.user_id, {
+            max_results: 100,
+            "user.fields": ["public_metrics", "description"],
+          });
+
+          const feedbackMessage =
+            "Followers found:\n" +
+            JSON.stringify(
+              followers.data.data.map((user) => ({
+                userId: user.id,
+                username: user.username,
+                name: user.name,
+                description: user.description,
+                followers: user.public_metrics?.followers_count,
+                following: user.public_metrics?.following_count,
+              }))
+            );
+
+          logger(feedbackMessage);
+
+          return new ExecutableGameFunctionResponse(
+            ExecutableGameFunctionStatus.Done,
+            feedbackMessage
+          );
+        } catch (e) {
+          return new ExecutableGameFunctionResponse(
+            ExecutableGameFunctionStatus.Failed,
+            "Failed to get followers"
           );
         }
       },
