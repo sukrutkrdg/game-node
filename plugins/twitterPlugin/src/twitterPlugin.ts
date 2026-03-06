@@ -248,7 +248,7 @@ class TwitterPlugin {
           const feedbackMessage =
             "Followers found:\n" +
             JSON.stringify(
-              followers.data.data.map((user) => ({
+              followers.data.map((user: any) => ({
                 userId: user.id,
                 username: user.username,
                 name: user.name,
